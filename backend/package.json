@@ -1,0 +1,40 @@
+{
+  "name": "nawi-backend",
+  "version": "1.0.0",
+  "description": "Backend API for NAWI Test Report Generator (SIH26035)",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "seed": "node src/db/seed.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
+    "multer": "^2.3.0",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.23.0",
+    "puppeteer": "^25.10.0",
+    "qrcode": "^1.5.4",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9",
+    "vitest": "^5.0.0"
+  }
+}

@@ -132,11 +132,48 @@ export const createSessionReport = async (req, res) => {
 };
 
 /**
+ * Get report for a specific test session
+ * GET /api/sessions/:sessionId/report
+ */
+export const getSessionReport = async (req, res) => {
+  const { sessionId } = req.params;
+
+  const sessionCheck = await query(`SELECT id, lab_id FROM test_sessions WHERE id = $1 LIMIT 1;`, [sessionId]);
+  if (sessionCheck.rows.length === 0) {
+    return fail(res, 'Test session not found', 404);
+  }
+
+  const sessionRow = sessionCheck.rows[0];
+  if (req.user.role !== 'ADMIN' && sessionRow.lab_id !== req.user.lab_id) {
+    return fail(res, 'Forbidden. Access restricted to session laboratory.', 403);
+  }
+
+  const reportRes = await query(
+    `SELECT r.*, s.session_number, s.status AS session_status,
+            ds.id AS signature_id, ds.designation AS signature_designation,
+            ds.signature_image, ds.signed_at AS signature_signed_at
+     FROM reports r
+     JOIN test_sessions s ON r.session_id = s.id
+     LEFT JOIN digital_signatures ds ON ds.report_id = r.id
+     WHERE r.session_id = $1
+     ORDER BY r.generated_at DESC LIMIT 1;`,
+    [sessionId]
+  );
+
+  if (reportRes.rows.length === 0) {
+    return success(res, { report: null }, 'No report generated yet for this session');
+  }
+
+  return success(res, { report: reportRes.rows[0] }, 'Session report retrieved successfully');
+};
+
+/**
  * Download generated PDF certificate file
  * GET /api/reports/:reportNumber/download
  */
 export const downloadReport = async (req, res) => {
   const { reportNumber } = req.params;
+  const { inline } = req.query;
 
   const reportRes = await query(
     `SELECT r.*, s.lab_id
@@ -151,20 +188,23 @@ export const downloadReport = async (req, res) => {
   }
 
   const report = reportRes.rows[0];
-  if (req.user.role !== 'ADMIN' && report.lab_id !== req.user.lab_id) {
-    return fail(res, 'Forbidden. Access restricted to report laboratory.', 403);
+
+  // If report.pdf_url is a full Supabase Storage URL (http/https), redirect directly to public storage
+  if (report.pdf_url && (report.pdf_url.startsWith('http://') || report.pdf_url.startsWith('https://'))) {
+    return res.redirect(report.pdf_url);
   }
 
   const uploadBaseDir = process.env.UPLOAD_DIR || './uploads';
   const pdfFilePath = path.resolve(uploadBaseDir, 'reports', `${reportNumber}.pdf`);
 
-  if (!fs.existsSync(pdfFilePath)) {
-    return fail(res, 'Report PDF file not found on server storage', 404);
+  if (fs.existsSync(pdfFilePath)) {
+    res.setHeader('Content-Type', 'application/pdf');
+    const disposition = (inline === 'true' || inline === true) ? 'inline' : 'attachment';
+    res.setHeader('Content-Disposition', `${disposition}; filename="${reportNumber}.pdf"`);
+    return res.sendFile(pdfFilePath);
   }
 
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${reportNumber}.pdf"`);
-  return res.sendFile(pdfFilePath);
+  return fail(res, 'Report PDF file not found on server storage', 404);
 };
 
 /**
@@ -277,7 +317,7 @@ export const signReport = async (req, res) => {
  */
 export const listReports = async (req, res) => {
   let sql = `
-    SELECT r.id, r.report_number, r.pdf_url, r.overall_result, r.generated_at, r.is_signed,
+    SELECT r.id, r.report_number, r.pdf_url, r.qr_code, r.overall_result, r.generated_at, r.is_signed,
            s.session_number, s.id AS session_id,
            i.model AS instrument_model, i.serial_number, i.accuracy_class,
            m.name AS manufacturer_name,

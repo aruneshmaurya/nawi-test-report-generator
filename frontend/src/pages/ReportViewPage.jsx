@@ -22,13 +22,9 @@ import {
   QrCode,
   ExternalLink,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
   Copy,
   Check,
-  Scale,
-  Building2,
-  Calendar,
+  ImageIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,13 +44,33 @@ export const ReportViewPage = () => {
   const [designation, setDesignation] = useState('Director of Metrology / Authorized Signatory');
   const [signing, setSigning] = useState(false);
 
+  // Helper to resolve full downloadable / embeddable PDF URL
+  const getResolvedPdfUrl = (pdfUrl, reportNumber) => {
+    if (!pdfUrl) return null;
+    if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) {
+      return pdfUrl;
+    }
+    const base = (apiClient.defaults.baseURL || '').replace(/\/api\/?$/, '');
+    if (pdfUrl.startsWith('/')) {
+      return `${base}${pdfUrl}`;
+    }
+    return `${apiClient.defaults.baseURL}/reports/${reportNumber}/download?inline=true`;
+  };
+
   const fetchReport = useCallback(async () => {
     setLoading(true);
     try {
-      // Look up reports for this session
-      const res = await apiClient.get('/reports');
-      if (res.data?.success && Array.isArray(res.data?.data?.reports)) {
-        const matching = res.data.data.reports.find((r) => r.session_id === id);
+      // 1. Try direct session report endpoint
+      const res = await apiClient.get(`/sessions/${id}/report`);
+      if (res.data?.success && res.data?.data?.report) {
+        setReport(res.data.data.report);
+        return;
+      }
+
+      // 2. Fallback to reports list
+      const listRes = await apiClient.get('/reports');
+      if (listRes.data?.success && Array.isArray(listRes.data?.data?.reports)) {
+        const matching = listRes.data.data.reports.find((r) => r.session_id === id);
         if (matching) {
           setReport(matching);
         }
@@ -98,27 +114,41 @@ export const ReportViewPage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownloadQr = () => {
+    if (!report?.qr_code) {
+      toast.error('QR code image not available');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = report.qr_code;
+    link.download = `${report.report_number}-QRCode.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('QR code downloaded as PNG');
+  };
+
   const handleDigitalSign = async () => {
     if (!report?.id) return;
     setSigning(true);
     try {
-      // Mock generated electronic signature stamp data URL
+      // Create a clean digital signature seal image
       const canvas = document.createElement('canvas');
-      canvas.width = 300;
-      canvas.height = 100;
+      canvas.width = 320;
+      canvas.height = 110;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, 300, 100);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 320, 110);
       ctx.strokeStyle = '#0b2545';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(5, 5, 290, 90);
-      ctx.font = 'bold 14px sans-serif';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(6, 6, 308, 98);
+      ctx.font = 'bold 13px sans-serif';
       ctx.fillStyle = '#0b2545';
-      ctx.fillText('DIGITALLY SIGNED & VERIFIED', 20, 35);
+      ctx.fillText('DIGITALLY SIGNED & VERIFIED', 20, 32);
       ctx.font = '11px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.fillText(`Designation: ${designation}`, 20, 58);
-      ctx.fillText(`Date: ${new Date().toISOString()}`, 20, 78);
+      ctx.fillStyle = '#334155';
+      ctx.fillText(`Designation: ${designation}`, 20, 56);
+      ctx.fillText(`Date: ${new Date().toLocaleDateString('en-GB')}`, 20, 78);
       const signatureDataUrl = canvas.toDataURL('image/png');
 
       const res = await apiClient.post(`/reports/${report.id}/sign`, {
@@ -127,7 +157,7 @@ export const ReportViewPage = () => {
       });
 
       if (res.data?.success) {
-        toast.success('Report digitally signed & endorsed!');
+        toast.success('Certificate digitally signed & endorsed!');
         setReport((prev) => ({ ...prev, is_signed: true }));
         setSignModalOpen(false);
         if (typeof refetchSession === 'function') {
@@ -161,7 +191,7 @@ export const ReportViewPage = () => {
           </Button>
         </div>
 
-        <Card className="border-slate-200 shadow-sm text-center py-12 px-6">
+        <Card className="border-slate-200 shadow-sm text-center py-12 px-6 bg-white">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 mb-4 shadow-sm">
             <FileText className="h-8 w-8" />
           </div>
@@ -192,9 +222,10 @@ export const ReportViewPage = () => {
 
   const isPass = report.overall_result === 'PASS';
   const verificationUrl = `${window.location.origin}/verify/${report.report_number}`;
+  const resolvedPdfUrl = getResolvedPdfUrl(report.pdf_url, report.report_number);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 font-sans">
       {/* Top Header & Actions Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
@@ -212,9 +243,9 @@ export const ReportViewPage = () => {
               {report.overall_result}
             </Badge>
             {report.is_signed && (
-              <Badge variant="approved" className="text-xs flex items-center space-x-1">
+              <Badge variant="approved" className="text-xs flex items-center space-x-1 font-bold">
                 <ShieldCheck className="h-3 w-3" />
-                <span>SIGNED</span>
+                <span>DIGITALLY SIGNED</span>
               </Badge>
             )}
           </div>
@@ -226,9 +257,20 @@ export const ReportViewPage = () => {
               variant="outline"
               size="sm"
               onClick={() => setSignModalOpen(true)}
-              className="text-xs border-slate-300 text-slate-700"
+              className="text-xs border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
             >
               <ShieldCheck className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> Digital Sign
+            </Button>
+          )}
+
+          {report.qr_code && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadQr}
+              className="text-xs border-slate-300 bg-white hover:bg-slate-50"
+            >
+              <ImageIcon className="mr-1.5 h-3.5 w-3.5 text-sky-600" /> Download QR (PNG)
             </Button>
           )}
 
@@ -236,16 +278,16 @@ export const ReportViewPage = () => {
             variant="outline"
             size="sm"
             onClick={handleCopyLink}
-            className="text-xs border-slate-300"
+            className="text-xs border-slate-300 bg-white hover:bg-slate-50"
           >
             {copied ? <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
             {copied ? 'Link Copied' : 'Copy Verify URL'}
           </Button>
 
-          {report.pdf_url && (
-            <a href={report.pdf_url} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" className="bg-[#0b2545] hover:bg-[#134074] text-white text-xs font-semibold">
-                <Download className="mr-1.5 h-3.5 w-3.5" /> Download PDF
+          {resolvedPdfUrl && (
+            <a href={resolvedPdfUrl} download={`${report.report_number}.pdf`} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" className="bg-[#0b2545] hover:bg-[#134074] text-white text-xs font-semibold shadow-sm">
+                <Download className="mr-1.5 h-3.5 w-3.5" /> Download Report (PDF)
               </Button>
             </a>
           )}
@@ -260,11 +302,11 @@ export const ReportViewPage = () => {
             <CardHeader className="p-4 border-b border-slate-100 flex flex-row items-center justify-between">
               <div className="flex items-center space-x-2">
                 <FileText className="h-4 w-4 text-sky-600" />
-                <CardTitle className="text-sm font-bold text-slate-900">Certificate PDF Document</CardTitle>
+                <CardTitle className="text-sm font-bold text-slate-900">Official Certificate Document</CardTitle>
               </div>
-              {report.pdf_url && (
+              {resolvedPdfUrl && (
                 <a
-                  href={report.pdf_url}
+                  href={resolvedPdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-sky-600 hover:text-sky-800 font-medium flex items-center space-x-1"
@@ -275,11 +317,11 @@ export const ReportViewPage = () => {
               )}
             </CardHeader>
             <CardContent className="p-0">
-              {report.pdf_url ? (
+              {resolvedPdfUrl ? (
                 <iframe
-                  src={`${report.pdf_url}#toolbar=1`}
+                  src={`${resolvedPdfUrl}#toolbar=1`}
                   title={`Certificate - ${report.report_number}`}
-                  className="w-full h-[720px] bg-slate-100 border-0"
+                  className="w-full h-[760px] bg-slate-50 border-0"
                 />
               ) : (
                 <div className="flex h-96 items-center justify-center text-xs text-slate-400">
@@ -310,29 +352,42 @@ export const ReportViewPage = () => {
                   <img
                     src={report.qr_code}
                     alt="Certificate QR Verification Code"
-                    className="w-44 h-44 object-contain"
+                    className="w-48 h-48 object-contain"
                   />
                 </div>
               ) : (
-                <div className="w-44 h-44 bg-slate-100 rounded-xl flex items-center justify-center text-xs text-slate-400">
-                  QR Token Generated
+                <div className="w-48 h-48 bg-slate-100 rounded-xl flex items-center justify-center text-xs text-slate-400">
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                 </div>
               )}
 
-              <div className="space-y-1 w-full">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Public Verification Link
-                </span>
-                <p className="font-mono text-xs text-slate-700 break-all bg-slate-50 p-2 rounded-lg border border-slate-200">
-                  {verificationUrl}
-                </p>
-              </div>
+              <div className="flex flex-col w-full gap-2">
+                {report.qr_code && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadQr}
+                    className="w-full text-xs border-slate-300"
+                  >
+                    <Download className="mr-1.5 h-3.5 w-3.5 text-sky-600" /> Download QR Image (PNG)
+                  </Button>
+                )}
 
-              <Link to={`/verify/${report.report_number}`} target="_blank" className="w-full">
-                <Button variant="outline" size="sm" className="w-full text-xs border-slate-300 text-sky-700 hover:bg-sky-50">
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Test Public Verification Page
-                </Button>
-              </Link>
+                <div className="space-y-1 w-full text-left">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Public Verification Link
+                  </span>
+                  <p className="font-mono text-[11px] text-slate-700 break-all bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    {verificationUrl}
+                  </p>
+                </div>
+
+                <Link to={`/verify/${report.report_number}`} target="_blank" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full text-xs border-slate-300 text-sky-700 hover:bg-sky-50">
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Test Public Verification Page
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
 

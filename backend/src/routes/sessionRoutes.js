@@ -19,7 +19,8 @@ import {
   getSessionSummary,
   updateSessionRemarks,
   updateRemarksSchema,
-  createSessionReport
+  createSessionReport,
+  getSessionReport
 } from '../controllers/reportController.js';
 
 const router = Router();
@@ -82,6 +83,13 @@ router.get('/:sessionId/summary', getSessionSummary);
  * @access  Private
  */
 router.patch('/:sessionId/remarks', validate(updateRemarksSchema), updateSessionRemarks);
+
+/**
+ * @route   GET /api/sessions/:sessionId/report
+ * @desc    Get generated certificate report for a session
+ * @access  Private
+ */
+router.get('/:sessionId/report', getSessionReport);
 
 /**
  * @route   POST /api/sessions/:sessionId/reports

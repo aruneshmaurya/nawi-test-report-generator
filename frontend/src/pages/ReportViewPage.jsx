@@ -221,8 +221,8 @@ export const ReportViewPage = () => {
     );
   }
 
-  // If no report generated yet for this session
-  if (!report) {
+  // If no report generated yet for this session or report is incomplete/pending
+  if (!report || !report.pdf_url || report.overall_result === 'PENDING') {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -235,9 +235,9 @@ export const ReportViewPage = () => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 mb-4 shadow-sm">
             <FileText className="h-8 w-8" />
           </div>
-          <CardTitle className="text-xl font-bold text-slate-900">Certificate Not Yet Generated</CardTitle>
+          <CardTitle className="text-xl font-bold text-slate-900">Certificate & QR Code Not Generated</CardTitle>
           <CardDescription className="text-xs text-slate-500 max-w-md mx-auto mt-2 mb-6">
-            All four evaluation test modules are complete. Click below to render the official OIML R-76 Certificate PDF with embedded QR Code verification token.
+            The official test certificate PDF and QR verification token have not been generated yet. Click below to render both the official PDF certificate and QR verification token together.
           </CardDescription>
 
           <Button
@@ -247,11 +247,11 @@ export const ReportViewPage = () => {
           >
             {generating ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rendering PDF with Puppeteer...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rendering PDF & QR Code with Puppeteer...
               </>
             ) : (
               <>
-                <FileText className="mr-2 h-4 w-4" /> Generate Official Certificate PDF Now
+                <FileText className="mr-2 h-4 w-4" /> Generate Official Certificate PDF & QR Code
               </>
             )}
           </Button>

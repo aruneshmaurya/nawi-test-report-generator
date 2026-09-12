@@ -96,8 +96,12 @@ export const SessionWizardLayout = () => {
   useEffect(() => {
     if (loading || !session) return;
 
-    // If session is already completed or approved, allow free access to all tabs
+    // If session is already completed or approved, only block the Certificate tab if no PDF report is generated yet
     if (session.status === 'COMPLETED' || session.status === 'APPROVED') {
+      if (currentStepIndex === 6 && (!session.report?.pdf_url || session.report?.overall_result === 'PENDING')) {
+        toast.warning('Please generate the official PDF certificate first from the Summary page.');
+        navigate(`/sessions/${id}/summary`, { replace: true });
+      }
       return;
     }
 
@@ -137,8 +141,8 @@ export const SessionWizardLayout = () => {
       }
     }
 
-    // Summary (index 5) & Report (index 6) require all four tests
-    if (currentStepIndex >= 5) {
+    // Summary (index 5) requires all four tests
+    if (currentStepIndex === 5) {
       if (
         !hasReadings('ACCURACY') ||
         !hasReadings('ECCENTRICITY') ||
@@ -147,6 +151,25 @@ export const SessionWizardLayout = () => {
       ) {
         toast.warning('Please record all four test modules before viewing final summary.');
         navigate(`/sessions/${id}/conditions`, { replace: true });
+        return;
+      }
+    }
+
+    // Certificate (index 6) requires generated PDF report
+    if (currentStepIndex === 6) {
+      if (
+        !hasReadings('ACCURACY') ||
+        !hasReadings('ECCENTRICITY') ||
+        !hasReadings('REPEATABILITY') ||
+        !hasReadings('DISCRIMINATION')
+      ) {
+        toast.warning('Please record all four test modules before viewing certificate.');
+        navigate(`/sessions/${id}/conditions`, { replace: true });
+        return;
+      }
+      if (!session.report?.pdf_url || session.report?.overall_result === 'PENDING') {
+        toast.warning('Please generate the official PDF certificate first from the Summary page.');
+        navigate(`/sessions/${id}/summary`, { replace: true });
       }
     }
   }, [currentStepIndex, tests, session, loading, id, navigate]);
@@ -234,26 +257,26 @@ export const SessionWizardLayout = () => {
           {WIZARD_STEPS.map((step, idx) => {
             const Icon = step.icon;
             const isActive = currentStepIndex === idx;
+            const isCompletedSession = session.status === 'COMPLETED' || session.status === 'APPROVED';
+            const hasValidReport = Boolean(session.report?.pdf_url && session.report?.overall_result !== 'PENDING');
+
             const isCompleted =
-              session.status === 'COMPLETED' ||
-              session.status === 'APPROVED' ||
-              (step.key === 'conditions' && session.environment) ||
-              (step.key === 'accuracy' && hasReadings('ACCURACY')) ||
-              (step.key === 'eccentricity' && hasReadings('ECCENTRICITY')) ||
-              (step.key === 'repeatability' && hasReadings('REPEATABILITY')) ||
-              (step.key === 'discrimination' && hasReadings('DISCRIMINATION')) ||
-              (step.key === 'summary' && (session.status === 'COMPLETED' || session.status === 'APPROVED')) ||
-              (step.key === 'report' && (session.status === 'COMPLETED' || session.status === 'APPROVED'));
+              (step.key === 'conditions' && (isCompletedSession || session.environment)) ||
+              (step.key === 'accuracy' && (isCompletedSession || hasReadings('ACCURACY'))) ||
+              (step.key === 'eccentricity' && (isCompletedSession || hasReadings('ECCENTRICITY'))) ||
+              (step.key === 'repeatability' && (isCompletedSession || hasReadings('REPEATABILITY'))) ||
+              (step.key === 'discrimination' && (isCompletedSession || hasReadings('DISCRIMINATION'))) ||
+              (step.key === 'summary' && isCompletedSession) ||
+              (step.key === 'report' && hasValidReport);
 
             const isAccessible =
-              session.status === 'COMPLETED' ||
-              session.status === 'APPROVED' ||
               idx === 0 ||
-              (idx === 1 && true) ||
-              (idx === 2 && hasReadings('ACCURACY')) ||
-              (idx === 3 && hasReadings('ACCURACY') && hasReadings('ECCENTRICITY')) ||
-              (idx === 4 && hasReadings('REPEATABILITY')) ||
-              (idx >= 5 && hasReadings('DISCRIMINATION'));
+              (idx === 1 && (isCompletedSession || true)) ||
+              (idx === 2 && (isCompletedSession || hasReadings('ACCURACY'))) ||
+              (idx === 3 && (isCompletedSession || (hasReadings('ACCURACY') && hasReadings('ECCENTRICITY')))) ||
+              (idx === 4 && (isCompletedSession || hasReadings('REPEATABILITY'))) ||
+              (idx === 5 && (isCompletedSession || hasReadings('DISCRIMINATION'))) ||
+              (idx === 6 && hasValidReport);
 
             return (
               <React.Fragment key={step.key}>
@@ -262,7 +285,11 @@ export const SessionWizardLayout = () => {
                   onClick={(e) => {
                     if (!isAccessible) {
                       e.preventDefault();
-                      toast.warning('Please complete previous test steps first.');
+                      if (idx === 6) {
+                        toast.warning('Please generate the official PDF certificate first from the Summary page.');
+                      } else {
+                        toast.warning('Please complete previous test steps first.');
+                      }
                     }
                   }}
                   className={`flex flex-1 items-center justify-center space-x-2 rounded-lg py-2.5 px-2 text-xs font-semibold transition-all ${

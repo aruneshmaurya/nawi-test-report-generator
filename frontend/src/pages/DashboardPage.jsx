@@ -105,9 +105,10 @@ export const DashboardPage = () => {
   };
 
   const handleViewSession = (session) => {
-    if (session.status === 'APPROVED') {
+    const hasValidPdf = Boolean(session.report_number && session.pdf_url && session.overall_result !== 'PENDING');
+    if ((session.status === 'APPROVED' || session.status === 'COMPLETED') && hasValidPdf) {
       navigate(`/sessions/${session.id}/report`);
-    } else if (session.status === 'COMPLETED') {
+    } else if (session.status === 'COMPLETED' || session.status === 'APPROVED') {
       navigate(`/sessions/${session.id}/summary`);
     } else {
       navigate(`/sessions/${session.id}/conditions`);

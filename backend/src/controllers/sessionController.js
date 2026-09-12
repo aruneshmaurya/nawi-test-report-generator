@@ -247,14 +247,19 @@ export const getSessionById = async (req, res) => {
   const envRes = await query(`SELECT * FROM environments WHERE session_id = $1 LIMIT 1;`, [id]);
 
   // Fetch reference weights
-  const weightsRes = await query(
-    `SELECT * FROM reference_weights WHERE session_id = $1 ORDER BY created_at ASC;`,
+  // Fetch latest report if generated
+  const reportRes = await query(
+    `SELECT r.id, r.report_number, r.pdf_url, r.qr_code, r.overall_result, r.is_signed, r.generated_at
+     FROM reports r
+     WHERE r.session_id = $1
+     ORDER BY r.generated_at DESC LIMIT 1;`,
     [id]
   );
 
   session.instrument = instRes.rows[0] || null;
   session.environment = envRes.rows[0] || null;
   session.reference_weights = weightsRes.rows || [];
+  session.report = reportRes.rows[0] || null;
 
   return success(res, { session }, 'Session retrieved successfully');
 };
@@ -276,12 +281,22 @@ export const getSessions = async (req, res) => {
            i.model AS instrument_model, i.serial_number AS instrument_serial, i.accuracy_class,
            m.name AS manufacturer_name,
            u.name AS tester_name,
-           l.name AS lab_name
+           l.name AS lab_name,
+           r.report_number,
+           r.pdf_url,
+           r.is_signed
     FROM test_sessions s
     LEFT JOIN instruments i ON s.instrument_id = i.id
     LEFT JOIN manufacturers m ON i.manufacturer_id = m.id
     LEFT JOIN users u ON s.tester_id = u.id
     LEFT JOIN laboratories l ON s.lab_id = l.id
+    LEFT JOIN LATERAL (
+      SELECT report_number, pdf_url, is_signed
+      FROM reports
+      WHERE session_id = s.id
+      ORDER BY generated_at DESC
+      LIMIT 1
+    ) r ON true
     WHERE 1=1
   `;
   const params = [];

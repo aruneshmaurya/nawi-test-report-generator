@@ -94,7 +94,19 @@ export const generateReportPdf = async (sessionId, userId) => {
   try {
     const launchOptions = {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync'
+      ]
     };
 
     if (process.env.PUPPETEER_EXECUTABLE_PATH) {
@@ -128,7 +140,7 @@ export const generateReportPdf = async (sessionId, userId) => {
     console.log('[PUPPETEER] Chromium instance launched successfully.');
 
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 15000 });
     
     // Generate PDF to in-memory buffer
     pdfBuffer = await page.pdf({

@@ -236,7 +236,7 @@ export const SessionWizardLayout = () => {
             const Icon = step.icon;
             const isActive = currentStepIndex === idx;
             const isCompletedSession = session.status === 'COMPLETED' || session.status === 'APPROVED';
-            const hasValidReport = Boolean(session.report?.pdf_url && session.report?.overall_result !== 'PENDING');
+            const hasValidReport = Boolean(session.report?.id || session.report?.report_number);
 
             const isCompleted =
               (step.key === 'conditions' && (isCompletedSession || session.environment)) ||

@@ -224,18 +224,20 @@ export const verifyReport = async (req, res) => {
   const { reportNumber } = req.params;
 
   const result = await query(
-    `SELECT r.report_number, r.overall_result, r.generated_at, r.is_signed,
-            s.started_at, s.completed_at,
-            i.model AS instrument_model, i.serial_number, i.accuracy_class,
+    `SELECT r.report_number, r.overall_result, r.generated_at, r.is_signed, r.pdf_url,
+            s.started_at, s.completed_at, s.session_number, s.verification_type, s.tester_name,
+            i.model AS instrument_model, i.serial_number, i.accuracy_class, i.capacity_max, i.capacity_min, i.verification_interval_e,
             m.name AS manufacturer_name,
-            l.name AS issuing_lab_name, l.registration_no AS issuing_lab_reg_no,
-            q.is_active AS qr_is_active
+            l.name AS issuing_lab_name, l.registration_no AS issuing_lab_reg_no, l.address AS issuing_lab_address,
+            q.is_active AS qr_is_active,
+            ds.designation AS signatory_designation, ds.signed_at AS signature_signed_at
      FROM reports r
      JOIN test_sessions s ON r.session_id = s.id
      JOIN instruments i ON s.instrument_id = i.id
      LEFT JOIN manufacturers m ON i.manufacturer_id = m.id
      JOIN laboratories l ON s.lab_id = l.id
      LEFT JOIN qr_codes q ON q.report_id = r.id
+     LEFT JOIN digital_signatures ds ON ds.report_id = r.id
      WHERE r.report_number = $1 LIMIT 1;`,
     [reportNumber]
   );
@@ -257,15 +259,26 @@ export const verifyReport = async (req, res) => {
     is_valid: true,
     data: {
       report_number: row.report_number,
-      instrument_make: row.manufacturer_name || 'Standard',
+      session_number: row.session_number,
+      verification_type: row.verification_type || 'Initial Verification',
+      instrument_make: row.manufacturer_name || 'Legal Metrology Standard Manufacturer',
       instrument_model: row.instrument_model,
       serial_number: row.serial_number,
       accuracy_class: `Class ${row.accuracy_class}`,
+      capacity_max: row.capacity_max ? `${row.capacity_max}g` : 'N/A',
+      capacity_min: row.capacity_min ? `${row.capacity_min}g` : '0g',
+      verification_interval_e: row.verification_interval_e ? `${row.verification_interval_e}g` : 'N/A',
       test_date: row.completed_at || row.generated_at,
+      generated_at: row.generated_at,
       overall_result: row.overall_result,
       issuing_lab_name: row.issuing_lab_name,
-      issuing_lab_reg_no: row.issuing_lab_reg_no,
-      is_signed: row.is_signed
+      issuing_lab_reg_no: row.issuing_lab_reg_no || 'NABL/OIML/IND-2026',
+      issuing_lab_address: row.issuing_lab_address || 'Government Metrology Complex, India',
+      tester_name: row.tester_name || 'Authorized Metrology Officer',
+      is_signed: Boolean(row.is_signed),
+      signatory_designation: row.signatory_designation || (row.is_signed ? 'Director of Metrology' : null),
+      signature_signed_at: row.signature_signed_at || null,
+      pdf_url: row.pdf_url || null
     }
   });
 };

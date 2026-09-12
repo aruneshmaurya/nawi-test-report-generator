@@ -1,3 +1,20 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let docaLogoBase64 = '';
+try {
+  const logoPath = path.resolve(__dirname, '../assets/doca_logo.png');
+  if (fs.existsSync(logoPath)) {
+    docaLogoBase64 = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+  }
+} catch (e) {
+  console.warn('Could not load doca_logo.png:', e.message);
+}
+
 /**
  * OIML R-76 NAWI Verification Test Certificate HTML Template
  * Conforms to Section 7 of MVP Reference & OIML R-76-2 Model Certificate
@@ -236,6 +253,7 @@ export const generateReportHtml = ({
   <div class="certificate-container">
     <!-- Header -->
     <div class="header">
+      ${docaLogoBase64 ? `<div style="text-align: center; margin-bottom: 8px;"><img src="${docaLogoBase64}" style="height: 48px; object-fit: contain;" alt="Department of Consumer Affairs" /></div>` : ''}
       <div class="emblem-title">${lab.name}</div>
       <div class="sub-title">OIML Type-Evaluation & Verification Testing Laboratory</div>
       <div class="standard-ref">Compliant with OIML R-76-1:2006 & Legal Metrology Act, 2009 | Registration No: ${lab.registration_no}</div>

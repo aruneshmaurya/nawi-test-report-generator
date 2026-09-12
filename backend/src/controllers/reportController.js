@@ -350,17 +350,20 @@ export const signReport = async (req, res) => {
 export const listReports = async (req, res) => {
   let sql = `
     SELECT r.id, r.report_number, r.pdf_url, r.qr_code, r.overall_result, r.generated_at, r.is_signed,
-           s.session_number, s.id AS session_id,
+           s.session_number, s.id AS session_id, s.verification_type,
            i.model AS instrument_model, i.serial_number, i.accuracy_class,
            m.name AS manufacturer_name,
            u.name AS generated_by_name,
-           l.name AS lab_name
+           l.name AS lab_name,
+           ds.designation AS signature_designation,
+           ds.signed_at AS signature_signed_at
     FROM reports r
     JOIN test_sessions s ON r.session_id = s.id
     JOIN instruments i ON s.instrument_id = i.id
     LEFT JOIN manufacturers m ON i.manufacturer_id = m.id
     LEFT JOIN users u ON r.generated_by = u.id
     JOIN laboratories l ON s.lab_id = l.id
+    LEFT JOIN digital_signatures ds ON ds.report_id = r.id
     WHERE 1=1
   `;
   const params = [];

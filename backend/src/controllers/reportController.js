@@ -122,8 +122,15 @@ export const createSessionReport = async (req, res) => {
     return fail(res, 'Forbidden. Access restricted to session laboratory.', 403);
   }
 
+  // Check if report already exists for this session to update instead of creating duplicate
+  const existingReport = await query(
+    `SELECT id FROM reports WHERE session_id = $1 ORDER BY generated_at DESC LIMIT 1;`,
+    [sessionId]
+  );
+  const existingReportId = existingReport.rows.length > 0 ? existingReport.rows[0].id : null;
+
   try {
-    const result = await generateReportPdf(sessionId, req.user.id);
+    const result = await generateReportPdf(sessionId, req.user.id, existingReportId);
     return success(res, result, 'Report PDF generated and recorded successfully', 201);
   } catch (err) {
     console.error('[REPORT ERROR] Report generation error:', err);
@@ -349,31 +356,36 @@ export const signReport = async (req, res) => {
  */
 export const listReports = async (req, res) => {
   let sql = `
-    SELECT r.id, r.report_number, r.pdf_url, r.qr_code, r.overall_result, r.generated_at, r.is_signed,
-           s.session_number, s.id AS session_id, s.verification_type,
-           i.model AS instrument_model, i.serial_number, i.accuracy_class,
-           m.name AS manufacturer_name,
-           u.name AS generated_by_name,
-           l.name AS lab_name,
-           ds.designation AS signature_designation,
-           ds.signed_at AS signature_signed_at
-    FROM reports r
-    JOIN test_sessions s ON r.session_id = s.id
-    JOIN instruments i ON s.instrument_id = i.id
-    LEFT JOIN manufacturers m ON i.manufacturer_id = m.id
-    LEFT JOIN users u ON r.generated_by = u.id
-    JOIN laboratories l ON s.lab_id = l.id
-    LEFT JOIN digital_signatures ds ON ds.report_id = r.id
+    WITH latest_reports AS (
+      SELECT DISTINCT ON (r.session_id)
+             r.id, r.report_number, r.pdf_url, r.qr_code, r.overall_result, r.generated_at, r.is_signed,
+             s.session_number, s.id AS session_id, s.verification_type, s.lab_id,
+             i.model AS instrument_model, i.serial_number, i.accuracy_class,
+             m.name AS manufacturer_name,
+             u.name AS generated_by_name,
+             l.name AS lab_name,
+             ds.designation AS signature_designation,
+             ds.signed_at AS signature_signed_at
+      FROM reports r
+      JOIN test_sessions s ON r.session_id = s.id
+      JOIN instruments i ON s.instrument_id = i.id
+      LEFT JOIN manufacturers m ON i.manufacturer_id = m.id
+      LEFT JOIN users u ON r.generated_by = u.id
+      JOIN laboratories l ON s.lab_id = l.id
+      LEFT JOIN digital_signatures ds ON ds.report_id = r.id
+      ORDER BY r.session_id, r.generated_at DESC
+    )
+    SELECT * FROM latest_reports
     WHERE 1=1
   `;
   const params = [];
 
   if (req.user.role !== 'ADMIN') {
     params.push(req.user.lab_id);
-    sql += ` AND s.lab_id = $${params.length}`;
+    sql += ` AND lab_id = $${params.length}`;
   }
 
-  sql += ` ORDER BY r.generated_at DESC;`;
+  sql += ` ORDER BY generated_at DESC;`;
 
   const result = await query(sql, params);
   return success(res, { reports: result.rows }, 'Reports retrieved successfully');

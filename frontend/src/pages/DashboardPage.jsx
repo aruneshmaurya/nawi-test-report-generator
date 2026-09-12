@@ -105,7 +105,9 @@ export const DashboardPage = () => {
   };
 
   const handleViewSession = (session) => {
-    if (session.status === 'COMPLETED' || session.status === 'APPROVED') {
+    if (session.status === 'APPROVED') {
+      navigate(`/sessions/${session.id}/report`);
+    } else if (session.status === 'COMPLETED') {
       navigate(`/sessions/${session.id}/summary`);
     } else {
       navigate(`/sessions/${session.id}/conditions`);

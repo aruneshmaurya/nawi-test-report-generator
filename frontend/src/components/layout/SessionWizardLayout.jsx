@@ -96,6 +96,11 @@ export const SessionWizardLayout = () => {
   useEffect(() => {
     if (loading || !session) return;
 
+    // If session is already completed or approved, allow free access to all tabs
+    if (session.status === 'COMPLETED' || session.status === 'APPROVED') {
+      return;
+    }
+
     // Conditions (index 0) is always accessible
     if (currentStepIndex <= 0) return;
 
@@ -230,15 +235,19 @@ export const SessionWizardLayout = () => {
             const Icon = step.icon;
             const isActive = currentStepIndex === idx;
             const isCompleted =
+              session.status === 'COMPLETED' ||
+              session.status === 'APPROVED' ||
               (step.key === 'conditions' && session.environment) ||
               (step.key === 'accuracy' && hasReadings('ACCURACY')) ||
               (step.key === 'eccentricity' && hasReadings('ECCENTRICITY')) ||
               (step.key === 'repeatability' && hasReadings('REPEATABILITY')) ||
               (step.key === 'discrimination' && hasReadings('DISCRIMINATION')) ||
-              (step.key === 'summary' && session.status === 'COMPLETED') ||
-              (step.key === 'report' && session.status === 'COMPLETED');
+              (step.key === 'summary' && (session.status === 'COMPLETED' || session.status === 'APPROVED')) ||
+              (step.key === 'report' && (session.status === 'COMPLETED' || session.status === 'APPROVED'));
 
             const isAccessible =
+              session.status === 'COMPLETED' ||
+              session.status === 'APPROVED' ||
               idx === 0 ||
               (idx === 1 && true) ||
               (idx === 2 && hasReadings('ACCURACY')) ||

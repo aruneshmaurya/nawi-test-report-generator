@@ -10,27 +10,25 @@ import {
 
 const router = Router();
 
-router.use(requireAuth);
+/**
+ * @route   GET /api/reports/:reportNumber/download
+ * @desc    Stream/download generated PDF certificate (Public / Iframe embeddable)
+ * @access  Public
+ */
+router.get('/:reportNumber/download', downloadReport);
 
 /**
  * @route   GET /api/reports
  * @desc    List all reports (scoped to user's lab)
  * @access  Private
  */
-router.get('/', listReports);
-
-/**
- * @route   GET /api/reports/:reportNumber/download
- * @desc    Stream/download generated PDF certificate
- * @access  Private (Scoped to same lab or ADMIN)
- */
-router.get('/:reportNumber/download', downloadReport);
+router.get('/', requireAuth, listReports);
 
 /**
  * @route   POST /api/reports/:reportId/sign
  * @desc    Apply digital signature to report
  * @access  Private
  */
-router.post('/:reportId/sign', validate(signReportSchema), signReport);
+router.post('/:reportId/sign', requireAuth, validate(signReportSchema), signReport);
 
 export default router;

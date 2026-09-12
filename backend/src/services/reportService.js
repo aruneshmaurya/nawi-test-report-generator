@@ -55,7 +55,7 @@ export const generateReportPdf = async (sessionId, userId) => {
   });
 
   const pdfFileName = `${reportNumber}.pdf`;
-  const storagePath = `reports/${pdfFileName}`;
+  const storagePath = pdfFileName;
 
   // 5. Generate HTML from template
   const reportData = {

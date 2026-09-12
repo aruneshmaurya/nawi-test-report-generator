@@ -195,16 +195,25 @@ export const downloadReport = async (req, res) => {
   }
 
   const uploadBaseDir = process.env.UPLOAD_DIR || './uploads';
-  const pdfFilePath = path.resolve(uploadBaseDir, 'reports', `${reportNumber}.pdf`);
+  const possiblePaths = [
+    path.resolve(uploadBaseDir, 'reports', `${reportNumber}.pdf`),
+    path.resolve(uploadBaseDir, 'reports', 'reports', `${reportNumber}.pdf`),
+    path.resolve(uploadBaseDir, `${reportNumber}.pdf`)
+  ];
 
-  if (fs.existsSync(pdfFilePath)) {
-    res.setHeader('Content-Type', 'application/pdf');
-    const disposition = (inline === 'true' || inline === true) ? 'inline' : 'attachment';
-    res.setHeader('Content-Disposition', `${disposition}; filename="${reportNumber}.pdf"`);
-    return res.sendFile(pdfFilePath);
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      const disposition = (inline === 'true' || inline === true) ? 'inline' : 'attachment';
+      res.setHeader('Content-Disposition', `${disposition}; filename="${reportNumber}.pdf"`);
+      return res.sendFile(p);
+    }
   }
 
-  return fail(res, 'Report PDF file not found on server storage', 404);
+  // Fallback to Supabase Storage public URL
+  const supabaseBaseUrl = process.env.SUPABASE_URL || 'https://nsuxefmnibwjbwoyqlaq.supabase.co';
+  const supabaseUrl = `${supabaseBaseUrl}/storage/v1/object/public/reports/${reportNumber}.pdf`;
+  return res.redirect(supabaseUrl);
 };
 
 /**

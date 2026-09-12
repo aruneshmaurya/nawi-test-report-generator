@@ -46,15 +46,17 @@ export const ReportViewPage = () => {
 
   // Helper to resolve full downloadable / embeddable PDF URL
   const getResolvedPdfUrl = (pdfUrl, reportNumber) => {
-    if (!pdfUrl) return null;
-    if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) {
+    if (pdfUrl && (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://'))) {
       return pdfUrl;
     }
-    const base = (apiClient.defaults.baseURL || '').replace(/\/api\/?$/, '');
-    if (pdfUrl.startsWith('/')) {
-      return `${base}${pdfUrl}`;
+    const apiBase = (apiClient.defaults.baseURL || '').replace(/\/api\/?$/, '');
+    if (reportNumber) {
+      return `${apiBase}/api/reports/${reportNumber}/download?inline=true`;
     }
-    return `${apiClient.defaults.baseURL}/reports/${reportNumber}/download?inline=true`;
+    if (pdfUrl && pdfUrl.startsWith('/')) {
+      return `${apiBase}${pdfUrl}`;
+    }
+    return null;
   };
 
   const fetchReport = useCallback(async () => {
@@ -252,6 +254,21 @@ export const ReportViewPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGeneratePdf}
+            disabled={generating}
+            className="text-xs border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
+          >
+            {generating ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileText className="mr-1.5 h-3.5 w-3.5 text-sky-600" />
+            )}
+            {generating ? 'Re-generating...' : 'Re-generate PDF'}
+          </Button>
+
           {!report.is_signed && (
             <Button
               variant="outline"

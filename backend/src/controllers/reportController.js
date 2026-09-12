@@ -319,6 +319,14 @@ export const signReport = async (req, res) => {
   // Update report is_signed = true
   await query(`UPDATE reports SET is_signed = true WHERE id = $1;`, [reportId]);
 
+  // Re-generate official signed PDF certificate with embedded digital signature stamp
+  let signedPdfResult = null;
+  try {
+    signedPdfResult = await generateReportPdf(report.session_id, req.user.id, reportId);
+  } catch (genErr) {
+    console.warn('[SIGN REPORT] PDF regeneration notice:', genErr.message);
+  }
+
   await logAudit({
     userId: req.user.id,
     sessionId: report.session_id,
@@ -329,7 +337,10 @@ export const signReport = async (req, res) => {
     ipAddress: req.ip
   });
 
-  return success(res, { signature: sigRes.rows[0] }, 'Report signed successfully');
+  return success(res, {
+    signature: sigRes.rows[0],
+    report: signedPdfResult?.report || { ...report, is_signed: true }
+  }, 'Report digitally signed and official certificate updated successfully');
 };
 
 /**

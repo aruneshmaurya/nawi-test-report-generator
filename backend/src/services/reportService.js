@@ -29,7 +29,7 @@ export const generateReportNumber = async () => {
  * @param {string} userId - UUID of requesting user
  * @returns {Promise<{ report: object, download_url: string }>}
  */
-export const generateReportPdf = async (sessionId, userId) => {
+export const generateReportPdf = async (sessionId, userId, existingReportId = null) => {
   // 1. Fetch full aggregated data
   const summary = await aggregateSessionSummary(sessionId);
   const session = summary.session;
@@ -38,10 +38,40 @@ export const generateReportPdf = async (sessionId, userId) => {
   const envRes = await query(`SELECT * FROM environments WHERE session_id = $1 LIMIT 1;`, [sessionId]);
   const weightsRes = await query(`SELECT * FROM reference_weights WHERE session_id = $1 ORDER BY created_at ASC;`, [sessionId]);
 
-  // 3. Generate Report Number & QR Verification Token
-  const reportNumber = await generateReportNumber();
+  let reportNumber;
+  let reportRow = null;
+  let signature = null;
+
+  if (existingReportId) {
+    const existingRes = await query(
+      `SELECT r.*, ds.designation AS signature_designation, ds.signature_image, ds.signed_at AS signature_signed_at,
+              u.name AS signer_name
+       FROM reports r
+       LEFT JOIN digital_signatures ds ON ds.report_id = r.id
+       LEFT JOIN users u ON ds.signed_by = u.id
+       WHERE r.id = $1 LIMIT 1;`,
+      [existingReportId]
+    );
+    if (existingRes.rows.length > 0) {
+      reportRow = existingRes.rows[0];
+      reportNumber = reportRow.report_number;
+      if (reportRow.signature_image) {
+        signature = {
+          designation: reportRow.signature_designation,
+          signature_image: reportRow.signature_image,
+          signer_name: reportRow.signer_name || 'Authorized Signatory',
+          signed_at: reportRow.signature_signed_at
+        };
+      }
+    }
+  }
+
+  if (!reportNumber) {
+    reportNumber = await generateReportNumber();
+  }
+
   const qrToken = crypto.randomUUID();
-  const publicAppUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+  const publicAppUrl = process.env.PUBLIC_APP_URL || 'https://nawi-test-report-generator.vercel.app';
   const verificationUrl = `${publicAppUrl}/verify/${reportNumber}`;
 
   // 4. Render QR Code to PNG data URL
@@ -61,7 +91,7 @@ export const generateReportPdf = async (sessionId, userId) => {
   const reportData = {
     report_number: reportNumber,
     overall_result: summary.overall_result,
-    generated_at: new Date().toISOString(),
+    generated_at: reportRow?.generated_at || new Date().toISOString(),
     remarks: summary.reason_string
   };
 
@@ -85,7 +115,7 @@ export const generateReportPdf = async (sessionId, userId) => {
     tests: summary.tests,
     qrDataUrl,
     verificationUrl,
-    signature: null
+    signature
   });
 
   // 6. Render PDF via Puppeteer
@@ -179,31 +209,44 @@ export const generateReportPdf = async (sessionId, userId) => {
   try {
     await client.query('BEGIN');
 
-    const reportInsertRes = await client.query(
-      `INSERT INTO reports (
-        session_id, report_number, pdf_url, qr_code, overall_result, generated_by, generated_at, is_signed, version, remarks
-      ) VALUES ($1, $2, $3, $4, $5, $6, now(), false, 1, $7)
-      RETURNING *;`,
-      [
-        sessionId,
-        reportNumber,
-        pdfUrl,
-        qrDataUrl,
-        summary.overall_result,
-        userId || null,
-        summary.reason_string
-      ]
-    );
+    if (existingReportId) {
+      const updateRes = await client.query(
+        `UPDATE reports SET
+           pdf_url = $1,
+           is_signed = COALESCE($2, is_signed),
+           version = version + 1
+         WHERE id = $3
+         RETURNING *;`,
+        [pdfUrl, signature ? true : null, existingReportId]
+      );
+      createdReport = updateRes.rows[0];
+    } else {
+      const reportInsertRes = await client.query(
+        `INSERT INTO reports (
+          session_id, report_number, pdf_url, qr_code, overall_result, generated_by, generated_at, is_signed, version, remarks
+        ) VALUES ($1, $2, $3, $4, $5, $6, now(), false, 1, $7)
+        RETURNING *;`,
+        [
+          sessionId,
+          reportNumber,
+          pdfUrl,
+          qrDataUrl,
+          summary.overall_result,
+          userId || null,
+          summary.reason_string
+        ]
+      );
 
-    createdReport = reportInsertRes.rows[0];
+      createdReport = reportInsertRes.rows[0];
 
-    // Insert qr_codes row
-    await client.query(
-      `INSERT INTO qr_codes (
-        report_id, qr_token, verification_url, is_active, created_at
-      ) VALUES ($1, $2, $3, true, now());`,
-      [createdReport.id, qrToken, verificationUrl]
-    );
+      // Insert qr_codes row
+      await client.query(
+        `INSERT INTO qr_codes (
+          report_id, qr_token, verification_url, is_active, created_at
+        ) VALUES ($1, $2, $3, true, now());`,
+        [createdReport.id, qrToken, verificationUrl]
+      );
+    }
 
     // Update session status to COMPLETED and save overall_result
     await client.query(
@@ -232,7 +275,7 @@ export const generateReportPdf = async (sessionId, userId) => {
   await logAudit({
     userId,
     sessionId,
-    action: 'GENERATE_REPORT',
+    action: existingReportId ? 'REGENERATE_REPORT_SIGNED' : 'GENERATE_REPORT',
     entityType: 'reports',
     entityId: createdReport.id,
     newValue: createdReport

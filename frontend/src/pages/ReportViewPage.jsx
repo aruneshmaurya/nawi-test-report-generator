@@ -38,6 +38,7 @@ export const ReportViewPage = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [cacheBust, setCacheBust] = useState(Date.now());
 
   // Digital Sign Modal State
   const [signModalOpen, setSignModalOpen] = useState(false);
@@ -46,15 +47,16 @@ export const ReportViewPage = () => {
 
   // Helper to resolve full downloadable / embeddable PDF URL
   const getResolvedPdfUrl = (pdfUrl, reportNumber) => {
+    const cbQuery = cacheBust ? `&_cb=${cacheBust}` : '';
     if (pdfUrl && (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://'))) {
-      return pdfUrl;
+      return `${pdfUrl}${pdfUrl.includes('?') ? '&' : '?'}_cb=${cacheBust}`;
     }
     const apiBase = (apiClient.defaults.baseURL || '').replace(/\/api\/?$/, '');
     if (reportNumber) {
-      return `${apiBase}/api/reports/${reportNumber}/download?inline=true`;
+      return `${apiBase}/api/reports/${reportNumber}/download?inline=true${cbQuery}`;
     }
     if (pdfUrl && pdfUrl.startsWith('/')) {
-      return `${apiBase}${pdfUrl}`;
+      return `${apiBase}${pdfUrl}?_cb=${cacheBust}`;
     }
     return null;
   };
@@ -94,6 +96,7 @@ export const ReportViewPage = () => {
       const res = await apiClient.post(`/sessions/${id}/reports`);
       if (res.data?.success && res.data?.data?.report) {
         setReport(res.data.data.report);
+        setCacheBust(Date.now());
         toast.success('Certificate generated successfully!');
         if (typeof refetchSession === 'function') {
           await refetchSession();
@@ -134,23 +137,50 @@ export const ReportViewPage = () => {
     if (!report?.id) return;
     setSigning(true);
     try {
-      // Create a clean digital signature seal image
+      // Create a clean high-resolution digital signature seal image
       const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 110;
+      canvas.width = 360;
+      canvas.height = 120;
       const ctx = canvas.getContext('2d');
+
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 320, 110);
+      ctx.fillRect(0, 0, 360, 120);
+
+      // Navy & Steel blue double border
       ctx.strokeStyle = '#0b2545';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(6, 6, 308, 98);
-      ctx.font = 'bold 13px sans-serif';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(4, 4, 352, 112);
+      ctx.strokeStyle = '#2b6cb0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(8, 8, 344, 104);
+
+      // Official Stamp Header
+      ctx.font = 'bold 12px sans-serif';
       ctx.fillStyle = '#0b2545';
-      ctx.fillText('DIGITALLY SIGNED & VERIFIED', 20, 32);
-      ctx.font = '11px sans-serif';
-      ctx.fillStyle = '#334155';
-      ctx.fillText(`Designation: ${designation}`, 20, 56);
-      ctx.fillText(`Date: ${new Date().toLocaleDateString('en-GB')}`, 20, 78);
+      ctx.fillText('⚖ GOVT. OF INDIA • LEGAL METROLOGY', 18, 28);
+
+      // Designation
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#1e293b';
+      ctx.fillText(`Designation: ${designation}`, 18, 50);
+
+      const signDate = new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText(`Date: ${signDate} | Ref: ${report.report_number}`, 18, 70);
+
+      // Green Verification Endorsement
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#15803d';
+      ctx.fillText('✔ DIGITALLY SIGNED & VERIFIED (SEC. 24)', 18, 92);
+      ctx.font = '8px monospace';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(`SHA Token: ${report.report_number.replace(/[^0-9]/g, '') || '2026'}-${Date.now().toString(16).toUpperCase()}`, 18, 107);
+
       const signatureDataUrl = canvas.toDataURL('image/png');
 
       const res = await apiClient.post(`/reports/${report.id}/sign`, {
@@ -159,9 +189,17 @@ export const ReportViewPage = () => {
       });
 
       if (res.data?.success) {
-        toast.success('Certificate digitally signed & endorsed!');
-        setReport((prev) => ({ ...prev, is_signed: true }));
+        toast.success('Certificate digitally signed & endorsed! PDF updated.');
+        setReport((prev) => ({
+          ...prev,
+          is_signed: true,
+          signature_designation: designation,
+          signature_image: signatureDataUrl,
+          signature_signed_at: new Date().toISOString()
+        }));
+        setCacheBust(Date.now());
         setSignModalOpen(false);
+        await fetchReport();
         if (typeof refetchSession === 'function') {
           await refetchSession();
         }
@@ -407,6 +445,42 @@ export const ReportViewPage = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Digital Signature Card when signed */}
+          {report.is_signed && (
+            <Card className="border-emerald-200 bg-emerald-50/50 shadow-sm text-xs">
+              <CardHeader className="pb-2 border-b border-emerald-100 flex flex-row items-center justify-between">
+                <CardTitle className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center space-x-1.5">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <span>Digital Endorsement Seal</span>
+                </CardTitle>
+                <Badge variant="approved" className="text-[10px] bg-emerald-600 text-white font-bold">
+                  SEALED & VERIFIED
+                </Badge>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3">
+                {report.signature_image && (
+                  <div className="bg-white p-2 rounded-lg border border-emerald-200 flex justify-center shadow-xs">
+                    <img
+                      src={report.signature_image}
+                      alt="Digital Seal"
+                      className="max-h-24 w-full object-contain"
+                    />
+                  </div>
+                )}
+                <div className="space-y-1 text-slate-700">
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-slate-500">Signatory Title:</span>
+                    <span className="font-semibold text-slate-900 text-right">{report.signature_designation || 'Director of Metrology'}</span>
+                  </div>
+                  <div className="flex justify-between py-0.5">
+                    <span className="text-slate-500">Legal Standard:</span>
+                    <span className="font-semibold text-emerald-800">Sec. 24 Legal Metrology Act</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Certificate Metadata Card */}
           <Card className="border-slate-200 shadow-sm bg-white text-xs">

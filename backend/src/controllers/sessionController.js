@@ -247,6 +247,11 @@ export const getSessionById = async (req, res) => {
   const envRes = await query(`SELECT * FROM environments WHERE session_id = $1 LIMIT 1;`, [id]);
 
   // Fetch reference weights
+  const weightsRes = await query(
+    `SELECT * FROM reference_weights WHERE session_id = $1 ORDER BY created_at ASC;`,
+    [id]
+  );
+
   // Fetch latest report if generated
   const reportRes = await query(
     `SELECT r.id, r.report_number, r.pdf_url, r.qr_code, r.overall_result, r.is_signed, r.generated_at

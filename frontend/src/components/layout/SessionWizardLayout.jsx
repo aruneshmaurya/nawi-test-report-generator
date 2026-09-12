@@ -96,12 +96,8 @@ export const SessionWizardLayout = () => {
   useEffect(() => {
     if (loading || !session) return;
 
-    // If session is already completed or approved, only block the Certificate tab if no PDF report is generated yet
+    // If session is already completed or approved, allow free access to all tabs
     if (session.status === 'COMPLETED' || session.status === 'APPROVED') {
-      if (currentStepIndex === 6 && (!session.report?.pdf_url || session.report?.overall_result === 'PENDING')) {
-        toast.warning('Please generate the official PDF certificate first from the Summary page.');
-        navigate(`/sessions/${id}/summary`, { replace: true });
-      }
       return;
     }
 
@@ -141,35 +137,17 @@ export const SessionWizardLayout = () => {
       }
     }
 
-    // Summary (index 5) requires all four tests
-    if (currentStepIndex === 5) {
+    // Summary (index 5) & Certificate (index 6) require all four tests
+    if (currentStepIndex >= 5) {
       if (
         !hasReadings('ACCURACY') ||
         !hasReadings('ECCENTRICITY') ||
         !hasReadings('REPEATABILITY') ||
         !hasReadings('DISCRIMINATION')
       ) {
-        toast.warning('Please record all four test modules before viewing final summary.');
+        toast.warning('Please record all four test modules before viewing summary or certificate.');
         navigate(`/sessions/${id}/conditions`, { replace: true });
         return;
-      }
-    }
-
-    // Certificate (index 6) requires generated PDF report
-    if (currentStepIndex === 6) {
-      if (
-        !hasReadings('ACCURACY') ||
-        !hasReadings('ECCENTRICITY') ||
-        !hasReadings('REPEATABILITY') ||
-        !hasReadings('DISCRIMINATION')
-      ) {
-        toast.warning('Please record all four test modules before viewing certificate.');
-        navigate(`/sessions/${id}/conditions`, { replace: true });
-        return;
-      }
-      if (!session.report?.pdf_url || session.report?.overall_result === 'PENDING') {
-        toast.warning('Please generate the official PDF certificate first from the Summary page.');
-        navigate(`/sessions/${id}/summary`, { replace: true });
       }
     }
   }, [currentStepIndex, tests, session, loading, id, navigate]);

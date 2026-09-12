@@ -163,9 +163,9 @@ export const PublicVerifyPage = () => {
               <div className="space-y-2">
                 <div className="text-[11px] font-bold text-[#0b2545] uppercase tracking-wider flex items-center space-x-1.5">
                   <Clock className="h-3.5 w-3.5 text-sky-600" />
-                  <span>Verification Timestamp & Session</span>
+                  <span>Verification Timestamp & Compliance</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="space-y-0.5">
                     <span className="text-[10px] uppercase font-bold text-slate-400">Date & Time of Verification</span>
                     <p className="font-semibold text-slate-800">{formatDate(data.test_date || data.generated_at)}</p>
@@ -174,13 +174,9 @@ export const PublicVerifyPage = () => {
                     <span className="text-[10px] uppercase font-bold text-slate-400">Verification Type</span>
                     <p className="font-semibold text-slate-800">{data.verification_type}</p>
                   </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Session Identifier</span>
-                    <p className="font-mono text-slate-700">{data.session_number || '--'}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Standard Rule</span>
-                    <p className="font-semibold text-slate-800">Legal Metrology Rules, 2011</p>
+                  <div className="space-y-0.5 sm:col-span-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Governing Standard & Rule</span>
+                    <p className="font-semibold text-slate-800">Legal Metrology Act, 2009 & OIML R-76-1:2006</p>
                   </div>
                 </div>
               </div>
@@ -191,7 +187,7 @@ export const PublicVerifyPage = () => {
                   <Scale className="h-3.5 w-3.5 text-sky-600" />
                   <span>Instrument & Manufacturer Specifications</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="space-y-0.5">
                     <span className="text-[10px] uppercase font-bold text-slate-400">Manufacturer / Make</span>
                     <p className="font-semibold text-slate-800">{data.instrument_make}</p>
@@ -208,14 +204,6 @@ export const PublicVerifyPage = () => {
                     <span className="text-[10px] uppercase font-bold text-slate-400">Accuracy Class</span>
                     <p className="font-semibold text-sky-800">{data.accuracy_class}</p>
                   </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Max Capacity (Max)</span>
-                    <p className="font-medium text-slate-800">{data.capacity_max}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">Scale Interval (e)</span>
-                    <p className="font-medium text-slate-800">{data.verification_interval_e}</p>
-                  </div>
                 </div>
               </div>
 
@@ -223,17 +211,19 @@ export const PublicVerifyPage = () => {
               <div className="space-y-2">
                 <div className="text-[11px] font-bold text-[#0b2545] uppercase tracking-wider flex items-center space-x-1.5">
                   <Building2 className="h-3.5 w-3.5 text-sky-600" />
-                  <span>Issuing Authority & Security Sign-off</span>
+                  <span>Issuing Authority & Official Sign-off</span>
                 </div>
-                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
-                  <div className="flex justify-between items-start pb-2 border-b border-slate-200">
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                  <div className="flex justify-between items-start pb-2.5 border-b border-slate-200">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Laboratory</span>
-                      <div className="font-bold text-slate-900">{data.issuing_lab_name}</div>
-                      <div className="text-[11px] text-slate-500 flex items-center space-x-1 mt-0.5">
-                        <MapPin className="h-3 w-3 text-slate-400" />
-                        <span>{data.issuing_lab_address}</span>
-                      </div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Issuing Laboratory</span>
+                      <div className="font-bold text-slate-900 text-sm">{data.issuing_lab_name}</div>
+                      {data.issuing_lab_address && (
+                        <div className="text-[11px] text-slate-500 flex items-center space-x-1 mt-0.5">
+                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                          <span>{data.issuing_lab_address}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Registration No.</span>
@@ -241,18 +231,18 @@ export const PublicVerifyPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                    <div className="space-y-0.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                    <div className="space-y-0.5 bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Tested By Officer</span>
-                      <p className="font-medium text-slate-800 flex items-center space-x-1">
-                        <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
-                        <span>{data.tester_name}</span>
+                      <p className="font-bold text-slate-900 flex items-center space-x-1.5 text-xs mt-0.5">
+                        <UserCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                        <span>{data.tester_name || 'Legal Metrology Officer'}</span>
                       </p>
                     </div>
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Digital Endorsement</span>
-                      <p className="font-medium text-emerald-800 flex items-center space-x-1">
-                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                      <p className="font-bold text-emerald-800 flex items-center space-x-1.5 text-xs mt-0.5">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                         <span>{data.signatory_designation || 'Digitally Sealed'}</span>
                       </p>
                     </div>

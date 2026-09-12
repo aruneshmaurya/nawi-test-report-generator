@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "postinstall": "npx puppeteer browsers install chrome",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
     "seed": "node src/db/seed.js",

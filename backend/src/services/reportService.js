@@ -112,6 +112,16 @@ export const generateReportPdf = async (sessionId, userId) => {
           break;
         }
       }
+    } else {
+      // In Linux / Render container, attempt puppeteer's resolved executable path
+      try {
+        const resolvedPath = puppeteer.executablePath();
+        if (resolvedPath && fs.existsSync(resolvedPath)) {
+          launchOptions.executablePath = resolvedPath;
+        }
+      } catch (e) {
+        console.warn('[PUPPETEER] Default executable resolution notice:', e.message);
+      }
     }
 
     browser = await puppeteer.launch(launchOptions);

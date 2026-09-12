@@ -15,14 +15,24 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const parseExtraData = (raw) => {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return {};
+  }
+};
 
 export const RepeatabilityTestPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { session, instrument, tests, refetchTests } = useOutletContext();
+  const context = useOutletContext() || {};
+  const { session, instrument, tests = [], refetchTests } = context;
 
   const [testRecord, setTestRecord] = useState(null);
   const [loadValue, setLoadValue] = useState('');
@@ -61,35 +71,40 @@ export const RepeatabilityTestPage = () => {
 
   // Sync existing recorded readings
   useEffect(() => {
+    if (!Array.isArray(tests)) return;
     const repTest = tests.find((t) => t.test_type_code === 'REPEATABILITY');
     const existing = repTest?.readings?.[0];
 
     if (existing) {
       setRecordedReading(existing);
-      setLoadValue(existing.standard_value);
-      if (existing.extra_data?.indicated_values) {
-        setTrials(existing.extra_data.indicated_values.map(String));
+      setLoadValue(existing.standard_value ?? suggestedLoad);
+      const extra = parseExtraData(existing.extra_data);
+      if (Array.isArray(extra?.indicated_values) && extra.indicated_values.length > 0) {
+        setTrials(extra.indicated_values.map(String));
       }
-    } else if (loadValue === '') {
-      setLoadValue(suggestedLoad);
+    } else {
+      setRecordedReading(null);
+      if (loadValue === '') {
+        setLoadValue(suggestedLoad);
+      }
     }
   }, [tests, suggestedLoad]);
 
   const handleAddTrial = () => {
-    setTrials((prev) => [...prev, '']);
+    setTrials((prev) => [...(Array.isArray(prev) ? prev : ['', '', '']), '']);
   };
 
   const handleRemoveTrial = (idx) => {
-    if (trials.length <= 3) {
+    if ((trials || []).length <= 3) {
       toast.warning('OIML R-76 requires a minimum of 3 repeatability trials');
       return;
     }
-    setTrials((prev) => prev.filter((_, i) => i !== idx));
+    setTrials((prev) => (Array.isArray(prev) ? prev.filter((_, i) => i !== idx) : ['', '', '']));
   };
 
   const handleUpdateTrial = (idx, val) => {
     setTrials((prev) => {
-      const updated = [...prev];
+      const updated = Array.isArray(prev) ? [...prev] : ['', '', ''];
       updated[idx] = val;
       return updated;
     });
@@ -97,18 +112,18 @@ export const RepeatabilityTestPage = () => {
 
   // Count filled valid numbers
   const filledTrialsCount = useMemo(() => {
-    return trials.filter((t) => t !== '' && !isNaN(Number(t))).length;
+    return (Array.isArray(trials) ? trials : []).filter((t) => t !== '' && !isNaN(Number(t))).length;
   }, [trials]);
 
   const isFormValid = filledTrialsCount >= 3 && loadValue !== '' && !isNaN(Number(loadValue));
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!testRecord?.id || !isFormValid) return;
 
     setSubmitting(true);
     try {
-      const indicatedNumbers = trials
+      const indicatedNumbers = (Array.isArray(trials) ? trials : [])
         .filter((t) => t !== '' && !isNaN(Number(t)))
         .map(Number);
 
@@ -124,7 +139,9 @@ export const RepeatabilityTestPage = () => {
         } else {
           toast.success(`Repeatability PASS: Spread ${rec.error}g ≤ MPE ${rec.mpe}g`);
         }
-        await refetchTests();
+        if (typeof refetchTests === 'function') {
+          await refetchTests();
+        }
       }
     } catch (err) {
       console.error('Failed to submit repeatability test:', err);
@@ -143,7 +160,9 @@ export const RepeatabilityTestPage = () => {
       setRecordedReading(null);
       setTrials(['', '', '']);
       toast.success('Repeatability trials cleared');
-      await refetchTests();
+      if (typeof refetchTests === 'function') {
+        await refetchTests();
+      }
     } catch (err) {
       console.error('Failed to delete reading:', err);
       toast.error('Failed to clear repeatability reading');
@@ -151,6 +170,8 @@ export const RepeatabilityTestPage = () => {
       setDeleting(false);
     }
   };
+
+  const safeTrials = Array.isArray(trials) ? trials : ['', '', ''];
 
   return (
     <div className="space-y-6">
@@ -206,7 +227,7 @@ export const RepeatabilityTestPage = () => {
                   <span>Evaluated Result: {recordedReading.result}</span>
                 </div>
                 <p className="text-xs opacity-90">
-                  Spread ($\Delta = \text{Max} - \text{Min}$) = <strong>{recordedReading.error}g</strong> &bull; Permissible MPE = <strong>±{recordedReading.mpe}g</strong>
+                  Spread (Δ = Max - Min) = <strong>{recordedReading.error}g</strong> &bull; Permissible MPE = <strong>±{recordedReading.mpe}g</strong>
                 </p>
               </div>
 
@@ -247,7 +268,7 @@ export const RepeatabilityTestPage = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold text-slate-800">
-                Consecutive Indicated Readings ({trials.length} Trials)
+                Consecutive Indicated Readings ({safeTrials.length} Trials)
               </Label>
               <span className="text-xs font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
                 {filledTrialsCount} of 3 minimum trials entered
@@ -255,11 +276,11 @@ export const RepeatabilityTestPage = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {trials.map((trialVal, idx) => (
+              {safeTrials.map((trialVal, idx) => (
                 <div key={idx} className="p-3 rounded-lg border border-slate-200 bg-slate-50/70 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-600">Trial #{idx + 1}</span>
-                    {trials.length > 3 && !recordedReading && (
+                    {safeTrials.length > 3 && !recordedReading && (
                       <button
                         type="button"
                         onClick={() => handleRemoveTrial(idx)}

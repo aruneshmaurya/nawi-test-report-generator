@@ -1,13 +1,27 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+let rawBase = import.meta.env.VITE_API_BASE_URL || '';
+rawBase = rawBase.trim();
+
+if (rawBase) {
+  // Ensure protocol
+  if (!rawBase.startsWith('http://') && !rawBase.startsWith('https://') && !rawBase.startsWith('/')) {
+    rawBase = `https://${rawBase}`;
+  }
+  // Ensure /api suffix
+  if (!rawBase.endsWith('/api') && !rawBase.endsWith('/api/')) {
+    rawBase = rawBase.replace(/\/+$/, '') + '/api';
+  }
+} else {
+  rawBase = '/api';
+}
 
 export const apiClient = axios.create({
-  baseURL,
+  baseURL: rawBase,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 45000,
 });
 
 // Request Interceptor: Attach JWT Bearer token

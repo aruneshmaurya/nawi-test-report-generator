@@ -14,15 +14,25 @@ import {
   CheckCircle2,
   AlertCircle,
   Award,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const parseExtraData = (raw) => {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return {};
+  }
+};
+
 export const DiscriminationTestPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { session, instrument, tests, refetchTests } = useOutletContext();
+  const context = useOutletContext() || {};
+  const { session, instrument, tests = [], refetchTests } = context;
 
   const [testRecord, setTestRecord] = useState(null);
   const [baseLoad, setBaseLoad] = useState('');
@@ -66,20 +76,20 @@ export const DiscriminationTestPage = () => {
 
   // Sync existing recorded readings
   useEffect(() => {
+    if (!Array.isArray(tests)) return;
     const discTest = tests.find((t) => t.test_type_code === 'DISCRIMINATION');
     const existing = discTest?.readings?.[0];
 
     if (existing) {
       setRecordedReading(existing);
-      setBaseLoad(existing.standard_value);
-      setIndicatedAfter(existing.indicated_value);
-      if (existing.extra_data) {
-        const extra = existing.extra_data;
-        setAddedWeight(extra.added_weight ?? '');
-        setIndicatedBefore(extra.indicated_before ?? '');
-        setDisplayChanged(extra.display_changed ?? true);
-      }
+      setBaseLoad(existing.standard_value ?? suggestedBase);
+      setIndicatedAfter(existing.indicated_value ?? '');
+      const extra = parseExtraData(existing.extra_data);
+      setAddedWeight(extra.added_weight ?? suggestedAdded);
+      setIndicatedBefore(extra.indicated_before ?? '');
+      setDisplayChanged(extra.display_changed ?? true);
     } else {
+      setRecordedReading(null);
       if (baseLoad === '') setBaseLoad(suggestedBase);
       if (addedWeight === '') setAddedWeight(suggestedAdded);
     }
@@ -94,7 +104,7 @@ export const DiscriminationTestPage = () => {
     !isNaN(Number(addedWeight));
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!testRecord?.id || !isFormValid) return;
 
     setSubmitting(true);
@@ -114,7 +124,9 @@ export const DiscriminationTestPage = () => {
         } else {
           toast.success('Discrimination test evaluated as PASS.');
         }
-        await refetchTests();
+        if (typeof refetchTests === 'function') {
+          await refetchTests();
+        }
       }
     } catch (err) {
       console.error('Failed to submit discrimination test:', err);
@@ -132,7 +144,9 @@ export const DiscriminationTestPage = () => {
       await apiClient.delete(`/sessions/${id}/tests/${testRecord.id}/readings/${recordedReading.id}`);
       setRecordedReading(null);
       toast.success('Discrimination test cleared');
-      await refetchTests();
+      if (typeof refetchTests === 'function') {
+        await refetchTests();
+      }
     } catch (err) {
       console.error('Failed to delete reading:', err);
       toast.error('Failed to clear discrimination reading');
@@ -140,6 +154,8 @@ export const DiscriminationTestPage = () => {
       setDeleting(false);
     }
   };
+
+  const extraRecorded = recordedReading ? parseExtraData(recordedReading.extra_data) : {};
 
   return (
     <div className="space-y-6">
@@ -149,7 +165,7 @@ export const DiscriminationTestPage = () => {
             <div className="flex items-center space-x-2">
               <CardTitle className="text-base font-bold text-slate-900 flex items-center space-x-2">
                 <HelpCircle className="h-5 w-5 text-sky-600" />
-                <span>Page 7: Discrimination Test ($\Delta L = 1.4d$)</span>
+                <span>Page 7: Discrimination Test (ΔL = 1.4d)</span>
               </CardTitle>
               {recordedReading && (
                 <Badge variant={recordedReading.result === 'PASS' ? 'pass' : 'fail'} className="text-xs">
@@ -158,7 +174,7 @@ export const DiscriminationTestPage = () => {
               )}
             </div>
             <CardDescription className="text-xs text-slate-500 mt-1">
-              Verify digital indicator responsiveness when an extra small test weight ($\Delta L \ge 1.4d$) is smoothly deposited per OIML R-76 Section 3.8
+              Verify digital indicator responsiveness when an extra small test weight (ΔL ≥ 1.4d) is smoothly deposited per OIML R-76 Section 3.8
             </CardDescription>
           </div>
         </CardHeader>
@@ -183,7 +199,7 @@ export const DiscriminationTestPage = () => {
                   <span>Evaluated Result: {recordedReading.result}</span>
                 </div>
                 <p className="text-xs opacity-90">
-                  Base Load = <strong>{recordedReading.standard_value}g</strong> &bull; Added Load ($\Delta L$) = <strong>{recordedReading.extra_data?.added_weight}g</strong> &bull; Display Changed = <strong>{recordedReading.extra_data?.display_changed ? 'YES' : 'NO'}</strong>
+                  Base Load = <strong>{recordedReading.standard_value}g</strong> &bull; Added Load (ΔL) = <strong>{extraRecorded.added_weight ?? suggestedAdded}g</strong> &bull; Display Changed = <strong>{extraRecorded.display_changed ? 'YES' : 'NO'}</strong>
                 </p>
               </div>
 
@@ -204,7 +220,7 @@ export const DiscriminationTestPage = () => {
             {/* Input 1: Base Load */}
             <div className="space-y-1.5">
               <Label htmlFor="baseLoad" className="text-xs font-semibold text-slate-700">
-                Base Test Load ($L$) <span className="text-rose-500">*</span>
+                Base Test Load (L) <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -225,7 +241,7 @@ export const DiscriminationTestPage = () => {
             {/* Input 2: Added Test Weight */}
             <div className="space-y-1.5">
               <Label htmlFor="addedWeight" className="text-xs font-semibold text-slate-700">
-                Extra Added Weight ($\Delta L = 1.4d$) <span className="text-rose-500">*</span>
+                Extra Added Weight (ΔL = 1.4d) <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -241,13 +257,13 @@ export const DiscriminationTestPage = () => {
                 />
                 <span className="absolute right-3 top-2 text-xs text-slate-400">g</span>
               </div>
-              <p className="text-[10px] text-slate-500">Calculated $1.4 \times d$ ($1.4 \times {dVal} = {suggestedAdded}g$)</p>
+              <p className="text-[10px] text-slate-500">Calculated 1.4 × d (1.4 × {dVal} = {suggestedAdded}g)</p>
             </div>
 
             {/* Input 3: Indicated Value Before */}
             <div className="space-y-1.5">
               <Label htmlFor="indicatedBefore" className="text-xs font-semibold text-slate-700">
-                Indicated Value Before Adding Weight ($I_1$) <span className="text-rose-500">*</span>
+                Indicated Value Before Adding Weight (I₁) <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -268,7 +284,7 @@ export const DiscriminationTestPage = () => {
             {/* Input 4: Indicated Value After */}
             <div className="space-y-1.5">
               <Label htmlFor="indicatedAfter" className="text-xs font-semibold text-slate-700">
-                Indicated Value After Adding Weight ($I_2$) <span className="text-rose-500">*</span>
+                Indicated Value After Adding Weight (I₂) <span className="text-rose-500">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -290,7 +306,7 @@ export const DiscriminationTestPage = () => {
           {/* Input 5: Display Changed Radio Group */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
             <Label className="text-xs font-semibold text-slate-800">
-              Did the instrument display unmistakably change value upon depositing $\Delta L$? <span className="text-rose-500">*</span>
+              Did the instrument display unmistakably change value upon depositing ΔL? <span className="text-rose-500">*</span>
             </Label>
             <div className="flex space-x-3 pt-1">
               <button

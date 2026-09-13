@@ -74,8 +74,8 @@ export const AppLayout = () => {
           <div className="flex-1 bg-[#138808]" />
         </div>
 
-        {/* Brand Header with Official Government Logo */}
-        <div className="p-4 pb-3 border-b border-slate-800/90 bg-[#06182c]">
+        {/* Brand Header with Official Government Logo (Sticky Top) */}
+        <div className="shrink-0 p-4 pb-3 border-b border-slate-800/90 bg-[#06182c]">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-md border border-slate-300/40">
@@ -107,10 +107,10 @@ export const AppLayout = () => {
         </div>
 
         {/* Scrollable Sidebar Body */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3.5 custom-scrollbar">
           {/* Lab Scoping Credentials Card */}
-          <div className="rounded-xl bg-gradient-to-b from-slate-800/90 to-slate-900/90 p-3.5 border border-slate-700/80 shadow-inner">
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="rounded-xl bg-gradient-to-b from-slate-800/90 to-slate-900/90 p-3 border border-slate-700/80 shadow-inner">
+            <div className="flex items-center justify-between mb-1">
               <span className="flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider text-sky-400">
                 <Landmark className="h-3.5 w-3.5 text-sky-400" />
                 <span>Authorized Facility</span>
@@ -121,11 +121,11 @@ export const AppLayout = () => {
               </span>
             </div>
             
-            <div className="text-xs font-bold text-white leading-snug line-clamp-2" title={user?.lab_name || 'National Metrology Laboratory (NML)'}>
+            <div className="text-xs font-bold text-white leading-snug truncate" title={user?.lab_name || 'National Metrology Laboratory (NML)'}>
               {user?.lab_name || 'National Metrology Laboratory (NML)'}
             </div>
 
-            <div className="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px]">
+            <div className="mt-1.5 pt-1.5 border-t border-slate-700/60 flex items-center justify-between text-[10px]">
               <span className="text-slate-400 font-medium">Accreditation:</span>
               <span className="font-mono font-bold text-sky-300 bg-sky-950/70 px-1.5 py-0.5 rounded border border-sky-800/50">
                 {user?.lab_registration_no || 'NABL-OIML-2026-001'}
@@ -143,8 +143,13 @@ export const AppLayout = () => {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive =
-                  location.pathname === item.path ||
-                  (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+                  item.path === '/instruments'
+                    ? location.pathname === '/instruments'
+                    : item.path === '/instruments/new'
+                    ? location.pathname === '/instruments/new'
+                    : item.path === '/dashboard'
+                    ? location.pathname === '/dashboard'
+                    : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
 
                 return (
                   <NavLink
@@ -178,19 +183,19 @@ export const AppLayout = () => {
           </div>
 
           {/* Standards Compliance Badge Card */}
-          <div className="rounded-xl bg-[#06182c]/80 p-3 border border-slate-800 text-center space-y-1">
+          <div className="rounded-xl bg-[#06182c]/80 p-2.5 border border-slate-800 text-center space-y-0.5">
             <div className="flex items-center justify-center space-x-1 text-[10px] font-bold text-amber-400">
               <Award className="h-3.5 w-3.5" />
               <span>OIML R-76 & ACT 2009</span>
             </div>
             <p className="text-[10px] text-slate-400 leading-tight">
-              Section 24 Standard Verification & Digital Seal Authentication
+              Section 24 Verification & Digital Seal Infrastructure
             </p>
           </div>
         </div>
 
-        {/* User Info & Logout Footer */}
-        <div className="border-t border-slate-800/90 bg-[#06182c] p-3.5">
+        {/* User Info & Logout Footer (Sticky Bottom) */}
+        <div className="shrink-0 border-t border-slate-800/90 bg-[#06182c] p-3.5">
           <div className="flex items-center justify-between mb-3 rounded-xl bg-slate-800/50 p-2.5 border border-slate-700/50">
             <div className="flex items-center space-x-2.5 overflow-hidden">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[#0b2545] to-sky-600 text-xs font-bold text-white shadow-sm border border-sky-400/30">

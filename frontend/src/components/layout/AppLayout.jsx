@@ -75,31 +75,18 @@ export const AppLayout = () => {
         </div>
 
         {/* Brand Header with Official Government Logo (Sticky Top) */}
-        <div className="shrink-0 p-4 pb-3 border-b border-slate-800/90 bg-[#06182c]">
+        <div className="shrink-0 px-4 py-3.5 border-b border-slate-800/90 bg-[#06182c]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-md border border-slate-300/40">
-                <img
-                  src="/doca_logo.png"
-                  alt="Department of Consumer Affairs / उपभोक्ता मामले विभाग"
-                  className="h-10 w-10 object-contain"
-                />
-              </div>
-              <div className="overflow-hidden">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[#FF9933]">
-                  भारत सरकार • GOVT. OF INDIA
-                </div>
-                <div className="text-xs font-black tracking-tight text-white leading-tight">
-                  Legal Metrology Portal
-                </div>
-                <div className="text-[10px] font-medium text-sky-300/80 truncate">
-                  OIML R-76 Standards Engine
-                </div>
-              </div>
-            </div>
+            <Link to="/dashboard" className="flex-1 flex items-center justify-center">
+              <img
+                src="/doca_white_logo.png"
+                alt="उपभोक्ता मामले विभाग / Department of Consumer Affairs"
+                className="w-full max-h-12 object-contain brightness-110 drop-shadow-sm transition-transform hover:scale-[1.02]"
+              />
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="text-slate-400 hover:text-white md:hidden"
+              className="text-slate-400 hover:text-white md:hidden ml-2"
             >
               <X className="h-5 w-5" />
             </button>

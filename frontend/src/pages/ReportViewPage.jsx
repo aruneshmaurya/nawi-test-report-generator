@@ -157,7 +157,7 @@ export const ReportViewPage = () => {
       // Official Stamp Header
       ctx.font = 'bold 12px sans-serif';
       ctx.fillStyle = '#0b2545';
-      ctx.fillText('⚖ GOVT. OF INDIA • LEGAL METROLOGY', 18, 28);
+      ctx.fillText('⚖ TARAZOO • GOVT. OF INDIA LEGAL METROLOGY', 18, 28);
 
       // Designation
       ctx.font = 'bold 11px sans-serif';

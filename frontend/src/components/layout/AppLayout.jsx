@@ -74,22 +74,34 @@ export const AppLayout = () => {
           <div className="flex-1 bg-[#138808]" />
         </div>
 
-        {/* Brand Header with Official Government Logo (Sticky Top) */}
-        <div className="shrink-0 px-4 py-3.5 border-b border-slate-800/90 bg-[#06182c]">
-          <div className="flex items-center justify-between">
-            <Link to="/dashboard" className="flex-1 flex items-center justify-center">
+        {/* Brand Header with Official Government & Tarazoo Logo (Sticky Top) */}
+        <div className="shrink-0 px-3.5 py-3 border-b border-slate-800/90 bg-[#06182c]">
+          <div className="flex items-center justify-between mb-2">
+            <Link
+              to="/dashboard"
+              className="flex-1 flex items-center justify-center bg-white/95 hover:bg-white py-1.5 px-3 rounded-xl shadow-md border border-white/40 transition-all hover:scale-[1.01]"
+              title="TARAZOO - National Legal Metrology Portal"
+            >
               <img
-                src="/doca_white_logo.png"
-                alt="उपभोक्ता मामले विभाग / Department of Consumer Affairs"
-                className="w-full max-h-12 object-contain brightness-110 drop-shadow-sm transition-transform hover:scale-[1.02]"
+                src="/tarazoo_logo.png"
+                alt="TARAZOO"
+                className="w-full max-h-11 object-contain"
               />
             </Link>
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="text-slate-400 hover:text-white md:hidden ml-2"
+              className="text-slate-400 hover:text-white md:hidden ml-2 cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
+          </div>
+          <div className="text-center space-y-0.5">
+            <p className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
+              भारत सरकार • GOVT. OF INDIA
+            </p>
+            <p className="text-[10px] text-sky-200/80 font-medium truncate">
+              Department of Consumer Affairs • Legal Metrology
+            </p>
           </div>
         </div>
 
@@ -173,7 +185,7 @@ export const AppLayout = () => {
           <div className="rounded-xl bg-[#06182c]/80 p-2.5 border border-slate-800 text-center space-y-0.5">
             <div className="flex items-center justify-center space-x-1 text-[10px] font-bold text-amber-400">
               <Award className="h-3.5 w-3.5" />
-              <span>OIML R-76 & ACT 2009</span>
+              <span>TARAZOO • OIML R-76 & ACT 2009</span>
             </div>
             <p className="text-[10px] text-slate-400 leading-tight">
               Section 24 Verification & Digital Seal Infrastructure
@@ -213,25 +225,37 @@ export const AppLayout = () => {
       {/* 2. Main Layout Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top App Bar */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
+        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:px-6 shadow-sm">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="text-slate-600 hover:text-slate-900 md:hidden"
+              className="text-slate-600 hover:text-slate-900 md:hidden cursor-pointer"
             >
               <Menu className="h-6 w-6" />
             </button>
-            <div className="flex items-center space-x-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              </div>
+            <div className="flex items-center space-x-3">
+              <img
+                src="/tarazoo_icon.png"
+                alt="TARAZOO"
+                className="h-9 w-9 object-contain shrink-0"
+              />
               <div>
-                <span className="text-xs md:text-sm font-bold text-slate-800">
-                  National Legal Metrology Portal
-                </span>
-                <span className="hidden lg:inline text-xs text-slate-500 ml-2 border-l border-slate-300 pl-2">
-                  OIML R-76-1:2006 & Legal Metrology Act, 2009 Standards Compliance
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs md:text-sm font-extrabold text-[#0b2545] tracking-tight">
+                    TARAZOO
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-xs md:text-sm font-bold text-slate-800">
+                    National Legal Metrology Portal
+                  </span>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                    Govt. Verified
+                  </span>
+                </div>
+                <p className="hidden lg:block text-[11px] text-slate-500 font-medium">
+                  OIML R-76-1:2006 & Legal Metrology Act, 2009 Standards Compliance • Digital NAWI Registry
+                </p>
               </div>
             </div>
           </div>

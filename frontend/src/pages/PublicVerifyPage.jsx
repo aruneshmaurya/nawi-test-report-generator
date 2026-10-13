@@ -78,21 +78,27 @@ export const PublicVerifyPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-200 py-8 px-4 font-sans text-slate-800">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Official Header with National Department Logo */}
+        {/* Official Header with National Department and Tarazoo Logo */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 text-center space-y-3">
-          <div className="flex justify-center items-center">
+          <div className="flex justify-center items-center gap-4 sm:gap-6">
             <img
               src="/doca_logo.png"
               alt="Department of Consumer Affairs / उपभोक्ता मामले विभाग"
-              className="h-16 md:h-20 object-contain mx-auto"
+              className="h-14 md:h-16 object-contain"
+            />
+            <div className="h-10 w-[1px] bg-slate-200 hidden sm:block" />
+            <img
+              src="/tarazoo_logo.png"
+              alt="TARAZOO - National Legal Metrology Portal"
+              className="h-12 md:h-14 object-contain"
             />
           </div>
           <div className="border-t border-slate-100 pt-3">
-            <h1 className="text-base md:text-lg font-bold text-[#0b2545] tracking-tight">
-              National Legal Metrology Portal
+            <h1 className="text-base md:text-lg font-extrabold text-[#0b2545] tracking-tight">
+              TARAZOO — National Legal Metrology Portal
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              Official OIML R-76 & Legal Metrology Act, 2009 Digital Verification Registry
+              Official OIML R-76 & Legal Metrology Act, 2009 Digital Verification Registry • Govt. of India
             </p>
           </div>
         </div>

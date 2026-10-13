@@ -1,4 +1,4 @@
-# NAWI Test Report Generator — Production Deployment Guide
+# TARAZOO — National Legal Metrology Portal — Production Deployment Guide
 **SIH26035 — OIML R-76 & Legal Metrology Act 2009 Compliant System**
 
 This guide documents the complete end-to-end production deployment process using the verified free stack:
